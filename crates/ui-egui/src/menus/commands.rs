@@ -8,6 +8,15 @@ macro_rules! uic {
 
 /// UI-only commands (not in the AE menus; shortcuts and the command palette).
 pub const UI_COMMANDS: &[UiCommand] = &[
+    uic!("ai.chat", "AI Chat", [], None),
+    uic!("ai.settings", "AI Chat Preferences", [], None),
+    uic!("ai.send", "Send AI Message", [], None),
+    uic!("ai.stop", "Stop AI", [], None),
+    uic!("ai.clear", "Clear AI Chat", [], None),
+    uic!("ai.status", "AI Chat Status", [], None),
+    uic!("ai.saveKey", "Save OpenAI Key Securely", [], None),
+    uic!("ai.loadKey", "Load Saved OpenAI Key", [], None),
+    uic!("ai.forgetKey", "Forget OpenAI Key", [], None),
     uic!("window.dockAction", "Docking Action", [], None),
     uic!("playback.ramPreview", "Preview (Numpad 0)", [], Some("Num0")),
     uic!("playback.preview.shiftSpacebar", "Preview (Shift+Spacebar)", [], Some("Shift+Space")),

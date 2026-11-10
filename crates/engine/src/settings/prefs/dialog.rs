@@ -103,6 +103,17 @@ pub fn pages() -> Vec<Page> {
             ],
         },
         Page {
+            id: "ai",
+            title: "AI Chat",
+            items: vec![
+                s("ai.model", "OpenAI Model", Kind::Text, true),
+                s("ai.attachFrames", "Attach Composition and Footage Frames", B, true),
+                s("ai.rememberKey", "Remember Key in OS Credential Store", B, true),
+                Note("Messages, requested project data and frames go to OpenAI. API usage is billed to your key."),
+                Note("The API key is stored separately in the OS credential store, never in prefs.json or a project."),
+            ],
+        },
+        Page {
             id: "startup",
             title: "Startup & Repair",
             items: vec![

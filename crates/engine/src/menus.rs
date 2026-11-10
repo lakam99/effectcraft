@@ -536,6 +536,7 @@ pub const TREE: &str = r#"
   ---
   Settings...
     General... | app.settings {"page":"general"} | Cmd+Alt+;
+    AI Chat... | app.settings {"page":"ai"}
     Startup & Repair... | app.settings {"page":"startup"}
     Project... | app.settings {"page":"project"}
     Composition... | app.settings {"page":"composition"}
@@ -722,6 +723,7 @@ Edit
   Keyboard Shortcuts | app.keyboardShortcuts
   [!mac] Preferences
     [!mac] General... | app.settings {"page":"general"} | Cmd+Alt+;
+    [!mac] AI Chat... | app.settings {"page":"ai"}
     [!mac] Startup & Repair... | app.settings {"page":"startup"}
     [!mac] Project... | app.settings {"page":"project"}
     [!mac] Composition... | app.settings {"page":"composition"}
@@ -1261,6 +1263,7 @@ Window
   Assign Shortcut to Workspace
     @dynamic:workspaceShortcuts
   ---
+  AI Chat | window.panel {"panel":"aiChat"}
   Align | window.panel {"panel":"align"}
   Audio | window.panel {"panel":"audio"} | Cmd+4
   Brushes | window.panel {"panel":"brushes"} | Cmd+9

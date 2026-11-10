@@ -1,12 +1,4 @@
-<p align="center">
-  <a href="https://getartcraft.com/">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="docs/brand/artcraft-logo-white.svg">
-      <img alt="ArtCraft" src="docs/brand/artcraft-logo.svg" width="200">
-    </picture>
-  </a>
-</p>
-
+> Independent fork: OpenAI editor chat, secure key storage and releases from [lakam99/effectcraft](https://github.com/lakam99/effectcraft/releases). [AI Chat guide](docs/ai-chat.md).
 
 <p align="center">
   <img src="assets/app-icon/hicolor/256x256/apps/ai.storyteller.effectcraft.png" width="128" height="128" alt="EffectCraft icon: an engraved unicorn on a pink tile">
@@ -384,15 +376,13 @@ Copyright (c) 2026 ArtCraft Team and the EffectCraft contributors. Required noti
 Bundled fonts, icons, images and other assets keep their own open licenses; each one is listed
 with its author, source and license in [ATTRIBUTION.md](ATTRIBUTION.md).
 
-The ArtCraft name, wordmark and logos in [`docs/brand/`](docs/brand/) are trademarks of the
-ArtCraft Team and are not covered by this license. They may be used only unmodified, and only as
-part of this repository and EffectCraft, under [`docs/brand/LICENSE-brand.txt`](docs/brand/LICENSE-brand.txt).
-Forks and modified versions must remove them.
+This independent fork is based on EffectCraft by the ArtCraft team and community. Restricted ArtCraft marks have been removed.
 
-<p align="center">
-  <a href="https://getartcraft.com/"><img alt="ArtCraft" src="docs/brand/artcraft-mark.svg" width="28"></a><br>
-  <sub>Made by the <a href="https://getartcraft.com/">ArtCraft</a> team and community.</sub>
-</p>
+## OpenAI editor assistant
+
+Open **Window → AI Chat** for a dockable assistant that can inspect Composition and Footage frames and use the editor's commands. Configure its model, frame attachment and secure key saving in **Edit → Preferences → AI Chat**. See [the AI Chat guide](docs/ai-chat.md).
+
+Fork releases and the update checker use [lakam99/effectcraft](https://github.com/lakam99/effectcraft/releases).
 
 ## Star history
 

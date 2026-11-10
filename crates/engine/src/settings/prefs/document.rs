@@ -106,6 +106,9 @@ impl Prefs {
     /// Clamp values into their valid ranges and fill missing labels.
     pub fn normalize(&mut self) {
         self.version = PREFS_VERSION;
+        if !super::AiPrefs::valid_model(&self.ai.model) {
+            self.ai.model = super::AiPrefs::default().model;
+        }
         self.comp_presets.retain(CompPreset::is_valid);
         let mut seen = std::collections::HashSet::new();
         self.effects_favorites.retain(|id| !id.is_empty() && seen.insert(id.clone()));
@@ -177,6 +180,16 @@ impl Prefs {
 
     /// Set the value at a dotted key. The key must exist and the value must have its type.
     pub fn set(&mut self, key: &str, value: Value) -> Result<(), String> {
+        let model = if key == "ai.model" {
+            Some(&value)
+        } else if key == "ai" {
+            value.get("model")
+        } else {
+            None
+        };
+        if model.is_some_and(|v| !v.as_str().is_some_and(super::AiPrefs::valid_model)) {
+            return Err("Enter a model ID of 1-128 ASCII letters, digits, hyphens, dots, underscores or slashes".into());
+        }
         if let Some(c) = choices(key)
             && !value.as_str().is_some_and(|v| is_choice(c, v))
         {
@@ -255,6 +268,7 @@ impl Prefs {
 pub fn section_key(page: &str) -> Option<&'static str> {
     Some(match page {
         "general" => "general",
+        "ai" | "aichat" => "ai",
         "startup" => "startup",
         "project" => "project",
         "autoSave" | "autosave" => "autoSave",
@@ -284,6 +298,7 @@ pub fn page_id(name: &str) -> Option<&'static str> {
     let n = name.to_ascii_lowercase().replace([' ', '&', '-', '_'], "");
     let id = match n.as_str() {
         "general" => "general",
+        "ai" | "aichat" => "ai",
         "startup" | "startuprepair" => "startup",
         "project" | "autosave" | "newproject" => "project",
         "composition" | "display" => "composition",

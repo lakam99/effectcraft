@@ -191,6 +191,10 @@ pub fn waits_on_dialog(result: &Value) -> bool {
 
 /// Execute a UI or engine command by id.
 pub fn invoke(app: &mut EffectcraftApp, ctx: &egui::Context, id: &str, params: Value) -> Result<Value, String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(result) = crate::assistant::route(app, ctx, id) {
+        return result;
+    }
     crate::control::check_script_render(app, id)?;
     if matches!(id, "effects.copyPresetsFolderPath" | "mediaBrowser.copySourcePath") {
         return frontend(app, ctx, id, params);

@@ -3,14 +3,20 @@ Copyright (c) 2026 ArtCraft Team and the EffectCraft contributors.
 Licensed under the MIT License or the Apache License, Version 2.0, at your option
 (LICENSE-MIT, LICENSE-APACHE).
 
-The ArtCraft name, wordmark and logos in docs/brand/ are trademarks of the ArtCraft Team. They are
-not open source and are not covered by the license above; their terms are in
-docs/brand/LICENSE-brand.txt.
+This independent fork is based on EffectCraft by the ArtCraft team and community.
+The restricted ArtCraft marks are excluded from this fork.
 
 Third-party material
 
 This product bundles third-party material under its own licenses, listed below. The per-file
 list (author, source, license) is in ATTRIBUTION.md.
+
+OpenAI editor assistant
+
+The native assistant modules are adapted from the FilmCraft fork at
+https://github.com/lakam99/filmcraft/commit/8e1baf6c508ec7720765ce4cf455cc264afc59cf.
+Copyright (c) 2026 ArtCraft Team and the FilmCraft contributors.
+Licensed under MIT OR Apache-2.0 (LICENSE-MIT, LICENSE-APACHE).
 
 Bundled fonts
 

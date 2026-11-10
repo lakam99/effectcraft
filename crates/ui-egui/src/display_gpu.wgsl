@@ -279,9 +279,14 @@ fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     }
     let v = q(pm[channel - 1u]);
     if (P.ids0.y == 1u) {
-        var o = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-        o[channel - 1u] = v;
-        return o;
+        // FXC cannot write a vector component through a runtime index (X3500).
+        // Select each channel explicitly so the display pass also compiles on DirectX 12.
+        return vec4<f32>(
+            select(0.0, v, channel == 1u),
+            select(0.0, v, channel == 2u),
+            select(0.0, v, channel == 3u),
+            1.0,
+        );
     }
     return vec4<f32>(v, v, v, 1.0);
 }

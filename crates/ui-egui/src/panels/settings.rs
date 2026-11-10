@@ -54,6 +54,11 @@ fn reg(app: &mut EffectcraftApp, id: &str, r: &egui::Response, label: &str) {
 fn page_ui(app: &mut EffectcraftApp, ui: &mut egui::Ui, page: &Page, cur: &Value, t: &Tokens, acts: &mut Vec<Act>) {
     let get = |key: &str| cur.pointer(&format!("/{}", key.replace('.', "/"))).cloned().unwrap_or(Value::Null);
     let label_w = 250.0;
+    #[cfg(not(target_arch = "wasm32"))]
+    if page.id == "ai" {
+        crate::assistant::credentials_ui(app, ui, true);
+        ui.separator();
+    }
     for item in &page.items {
         match *item {
             Item::Section(title) => {

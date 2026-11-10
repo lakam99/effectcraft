@@ -102,6 +102,8 @@ pub use session::upgrade_effects;
 
 pub struct Session {
     pub project: Arc<Project>,
+    /// Changes only when replacing the project; delayed editor tools must not cross this boundary.
+    pub project_instance: Arc<()>,
     pub history: History,
     pub revision: u64,
     /// Process-unique monotonic revision of the on-canvas editor's committed text and session.
@@ -318,6 +320,7 @@ impl Default for Session {
         let project = Arc::new(Project::default());
         Session {
             saved_project: project.clone(),
+            project_instance: Arc::new(()),
             project,
             history: History::default(),
             revision: 0,

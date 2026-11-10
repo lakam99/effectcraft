@@ -19,7 +19,11 @@ impl EffectcraftApp {
     /// input/job/screenshot replies until their event happens and finish job waiters. Retry timeouts and refused
     /// screenshots are answered as `{"ok": false, "error": ...}`; the receiver is kept for the next tick.
     fn drain_control(&mut self, ctx: &egui::Context, now: f64) {
-        let Some(rx) = self.control_rx.take() else { return };
+        let Some(rx) = self.control_rx.take() else {
+            // AI tools also use these waiters when no external control server is running.
+            self.finish_job_waiters(ctx);
+            return;
+        };
         let mut reqs: Vec<(ControlRequest, f64)> = std::mem::take(&mut self.deferred);
         while let Ok(req) = rx.try_recv() {
             reqs.push((req, now + 3.0));
@@ -128,6 +132,8 @@ impl EffectcraftApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
         }
         self.drain_control(ctx, self.now);
+        #[cfg(not(target_arch = "wasm32"))]
+        crate::assistant::poll(self, ctx);
         ctx.request_repaint_after(std::time::Duration::from_millis(50));
     }
 
@@ -292,6 +298,8 @@ impl EffectcraftApp {
             self.advance_playback(ctx, scale, now, active, cid);
         }
         self.drain_control(ctx, now);
+        #[cfg(not(target_arch = "wasm32"))]
+        crate::assistant::poll(self, ctx);
         // A clean project may have passed the close guard before a control script created
         // unsaved edits and suspended. Cancel that same tick's close before the host handles it.
         if self.session.script_ui.render_host.is_some() {
@@ -687,5 +695,26 @@ impl EffectcraftApp {
             self.footage_watch_key = Some((self.session.revision, self.session.prefs.import.auto_reload_footage.clone(), self.session.disk_cache.is_some()));
             watcher.update(&self.session);
         }
+    }
+}
+
+#[cfg(test)]
+mod assistant_waiter_tests {
+    use super::*;
+
+    #[test]
+    fn assistant_job_replies_complete_without_an_external_control_server() {
+        let mut app = EffectcraftApp::new(Session::default());
+        let (reply, receive) = std::sync::mpsc::channel();
+        app.job_waiters.push((
+            control::JobWaiter { command: "jobs.wait".into(), params: json!({}), result: json!({"running":true}), jobs: vec![], log_cursor: 0, render: None },
+            reply,
+        ));
+        assert!(app.control_rx.is_none());
+        app.drain_control(&egui::Context::default(), 0.0);
+        let result = receive.try_recv().expect("the completed AI job must receive its reply without --control");
+        assert_eq!(result["ok"], true);
+        assert_eq!(result["result"]["running"], false);
+        assert!(app.job_waiters.is_empty());
     }
 }

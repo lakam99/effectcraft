@@ -1789,8 +1789,10 @@ fn automation_roots_confine_the_footage_a_project_names() {
     // Relative to the project: `../elsewhere/secret.png`, written into a copy of a project.
     let own = project("own.ecproj", &p(&read, "own.png"));
     let text = std::fs::read_to_string(&own).unwrap();
-    assert!(text.contains(&p(&read, "own.png")) || text.contains("own.png"), "{text}");
-    let relative = text.replace(&p(&read, "own.png"), "../elsewhere/secret.png").replace("\"own.png\"", "\"../elsewhere/secret.png\"");
+    // Match the serialized string: Windows backslashes are escaped inside project JSON.
+    let encoded_own = serde_json::to_string(&p(&read, "own.png")).unwrap();
+    assert!(text.contains(&encoded_own) || text.contains("\"own.png\""), "{text}");
+    let relative = text.replace(&encoded_own, "\"../elsewhere/secret.png\"").replace("\"own.png\"", "\"../elsewhere/secret.png\"");
     std::fs::write(read.join("relative.ecproj"), relative).unwrap();
     projects.push(("relative", p(&read, "relative.ecproj")));
 

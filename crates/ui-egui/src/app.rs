@@ -36,6 +36,8 @@ impl EffectcraftApp {
         let workspace_store = workspace_state::WorkspaceStore::load(session.config.as_deref(), &mut ui);
         EffectcraftApp {
             session,
+            #[cfg(not(target_arch = "wasm32"))]
+            assistant: Default::default(),
             ui,
             workspace_store,
             tokens: Tokens::for_kind(Default::default()),

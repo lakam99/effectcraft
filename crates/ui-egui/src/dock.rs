@@ -15,6 +15,7 @@ use crate::theme::Tokens;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum PanelKind {
+    AiChat,
     Project,
     EffectControls,
     Composition,
@@ -58,7 +59,8 @@ pub enum PanelKind {
 }
 
 impl PanelKind {
-    pub const ALL: [PanelKind; 34] = [
+    pub const ALL: [PanelKind; 35] = [
+        PanelKind::AiChat,
         PanelKind::Project,
         PanelKind::EffectControls,
         PanelKind::Composition,
@@ -96,6 +98,7 @@ impl PanelKind {
     ];
     pub fn title(self) -> &'static str {
         match self {
+            PanelKind::AiChat => "AI Chat",
             PanelKind::Project => "Project",
             PanelKind::EffectControls => "Effect Controls",
             PanelKind::Composition => "Composition",
@@ -368,6 +371,7 @@ fn workspace_root(name: &str) -> Node<PanelKind> {
                         &[
                             EffectsPresets,
                             Properties,
+                            AiChat,
                             Tracker,
                             Wiggler,
                             Smoother,

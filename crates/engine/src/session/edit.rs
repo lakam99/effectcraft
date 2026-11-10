@@ -230,6 +230,7 @@ impl Session {
         }
         self.layer_cache.clear();
         self.project = Arc::new(p);
+        self.project_instance = Arc::new(());
         // The set of footage effects read the channels of is sent again, even when it is empty.
         self.aux_footage = None;
         self.history = History::default();

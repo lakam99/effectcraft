@@ -44,6 +44,7 @@ pub const PREFS_FILE: &str = "prefs.json";
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Prefs {
+    pub ai: AiPrefs,
     pub version: u32,
     pub general: General,
     pub startup: Startup,
@@ -96,6 +97,7 @@ pub struct Prefs {
 impl Default for Prefs {
     fn default() -> Self {
         Prefs {
+            ai: AiPrefs::default(),
             version: PREFS_VERSION,
             general: General::default(),
             startup: Startup::default(),
@@ -128,5 +130,24 @@ impl Default for Prefs {
             comp_presets: vec![],
             extra: Extra::new(),
         }
+    }
+}
+
+/// Editor-wide AI preferences. Credentials and conversation never belong in JSON.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct AiPrefs {
+    pub model: String,
+    pub attach_frames: bool,
+    pub remember_key: bool,
+}
+impl Default for AiPrefs {
+    fn default() -> Self {
+        Self { model: "gpt-6.1-sol".into(), attach_frames: true, remember_key: true }
+    }
+}
+impl AiPrefs {
+    pub fn valid_model(model: &str) -> bool {
+        !model.is_empty() && model.len() <= 128 && model.bytes().all(|c| c.is_ascii_alphanumeric() || b"-._/".contains(&c))
     }
 }

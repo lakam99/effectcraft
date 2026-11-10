@@ -264,6 +264,12 @@ pub(crate) fn viewer_scroll(ctx: &egui::Context) -> ViewerScroll {
 
 pub fn show(app: &mut EffectcraftApp, ui: &mut egui::Ui, p: PanelKind, rect: Rect) {
     match p {
+        PanelKind::AiChat => {
+            #[cfg(not(target_arch = "wasm32"))]
+            crate::assistant::show(app, ui, rect);
+            #[cfg(target_arch = "wasm32")]
+            ui.put(rect.shrink(8.0), egui::Label::new("AI Chat is available in the desktop app."));
+        }
         PanelKind::Composition => viewers::show(app, ui, 0, rect),
         PanelKind::Viewer(n) => viewers::show(app, ui, n, rect),
         PanelKind::Timeline => timeline::show(app, ui, rect),
