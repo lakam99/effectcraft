@@ -1207,6 +1207,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "craft-ai-chat-core"
+version = "0.1.0"
+source = "git+https://github.com/lakam99/craft-ai-chat?rev=cd577bc2215b41cf1e438d51bff4294408f60138#cd577bc2215b41cf1e438d51bff4294408f60138"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "craft-ai-chat-egui"
+version = "0.1.0"
+source = "git+https://github.com/lakam99/craft-ai-chat?rev=cd577bc2215b41cf1e438d51bff4294408f60138#cd577bc2215b41cf1e438d51bff4294408f60138"
+dependencies = [
+ "craft-ai-chat-core",
+ "craft-ai-chat-native",
+ "egui",
+ "serde_json",
+]
+
+[[package]]
+name = "craft-ai-chat-native"
+version = "0.1.0"
+source = "git+https://github.com/lakam99/craft-ai-chat?rev=cd577bc2215b41cf1e438d51bff4294408f60138#cd577bc2215b41cf1e438d51bff4294408f60138"
+dependencies = [
+ "craft-ai-chat-core",
+ "keyring",
+ "rustls-rustcrypto",
+ "serde_json",
+ "sha2",
+ "ureq",
+]
+
+[[package]]
 name = "craft-docpath"
 version = "0.1.0"
 source = "git+https://github.com/storytold/craft-libs?rev=e11f9d9aebea5f6b8e74643c1ea1ed172ba5f545#e11f9d9aebea5f6b8e74643c1ea1ed172ba5f545"
@@ -2222,6 +2255,7 @@ version = "0.23.2"
 dependencies = [
  "bytemuck",
  "chrono",
+ "craft-ai-chat-egui",
  "craft-quit",
  "craft-ui",
  "craft-update",
@@ -2245,19 +2279,15 @@ dependencies = [
  "exr",
  "half",
  "image",
- "keyring",
  "kurbo",
  "log",
  "pollster 1.0.1",
  "rayon",
- "rustls-rustcrypto",
  "serde",
  "serde_json",
- "sha2",
  "sys-locale",
  "tempfile",
  "toml",
- "ureq",
  "web-time",
 ]
 

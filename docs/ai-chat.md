@@ -33,3 +33,18 @@ This fork's update checker uses [lakam99/effectcraft releases](https://github.co
 To upgrade a portable copy, close EffectCraft, replace the application files in its existing folder and keep `EffectCraftData`. Moving the preferences profile to a different directory gives it a separate credential entry; enter the key again there.
 
 The API shape follows the official OpenAI [function-calling guide](https://developers.openai.com/api/docs/guides/function-calling).
+
+
+## Shared Rust plugin
+
+The dock body, Responses client, conversation lifecycle and secure credential store
+come from [Craft AI Chat](https://github.com/lakam99/craft-ai-chat), pinned to a
+reviewed Git revision in the UI crate. This repository owns only its product
+adapter: active-view rendering, command/UI dispatch, preference persistence and
+normal dock registration. Existing preference keys and OS credential identities
+are preserved.
+
+Other Craft products can integrate the same source plugin through the `Host`
+trait, advertising their own tools and document context. See the shared
+repository's adapter guide and compiled non-video document example. This requires
+rebuilding the host application; it is not a runtime plugin for existing binaries.

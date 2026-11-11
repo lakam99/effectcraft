@@ -1,14 +1,17 @@
 use super::*;
+use crate::control;
 use effectcraft_engine::Session;
+use std::sync::{Arc, mpsc};
+use std::time::{Duration, Instant};
 
 fn turn(app: &mut EffectcraftApp) {
     let ctx = egui::Context::default();
     let deadline = Instant::now() + Duration::from_secs(8);
-    while app.assistant.pending.is_some() && Instant::now() < deadline {
+    while app.assistant.panel.busy() && Instant::now() < deadline {
         poll(app, &ctx);
         std::thread::sleep(Duration::from_millis(2));
     }
-    assert!(app.assistant.pending.is_none(), "AI turn did not complete");
+    assert!(!app.assistant.panel.busy(), "AI turn did not complete");
 }
 
 fn message() -> Value {
@@ -22,8 +25,8 @@ fn create_comp() -> Value {
 #[test]
 fn mock_openai_turn_uses_real_command_dispatch_and_undo() {
     let mut app = EffectcraftApp::new(Session::default());
-    app.assistant.prompt = "Create a composition".into();
-    app.assistant.attach = false;
+    *app.assistant.panel.prompt_mut() = "Create a composition".into();
+    app.session.prefs.ai.attach_frames = false;
     let mut count = 0;
     begin_with(&mut app, &egui::Context::default(), move |body| {
         count += 1;
@@ -38,7 +41,7 @@ fn mock_openai_turn_uses_real_command_dispatch_and_undo() {
     .unwrap();
     turn(&mut app);
     assert_eq!(app.session.project.item(app.session.active_comp_id().unwrap()).unwrap().name, "AI composition");
-    assert!(app.assistant.transcript.iter().any(|(role, _)| role == "Tool"));
+    assert!(app.assistant.panel.transcript().iter().any(|(role, _)| role == "Tool"));
     app.session.execute("edit.undo", json!({})).unwrap();
     assert_eq!(app.session.project.comps().count(), 0);
 }
@@ -46,8 +49,8 @@ fn mock_openai_turn_uses_real_command_dispatch_and_undo() {
 #[test]
 fn project_replacement_rejects_an_awaiting_edit() {
     let mut app = EffectcraftApp::new(Session::default());
-    app.assistant.prompt = "Do work".into();
-    app.assistant.attach = false;
+    *app.assistant.panel.prompt_mut() = "Do work".into();
+    app.session.prefs.ai.attach_frames = false;
     let (start, wait) = mpsc::channel();
     begin_with(&mut app, &egui::Context::default(), move |_| {
         wait.recv_timeout(Duration::from_secs(2)).unwrap();
@@ -58,27 +61,33 @@ fn project_replacement_rejects_an_awaiting_edit() {
     start.send(()).unwrap();
     turn(&mut app);
     assert_eq!(app.session.project.comps().count(), 0);
-    assert!(app.assistant.history.is_empty());
+    assert!(app.assistant.panel.context_items() == 0);
 }
 
 #[test]
 fn stop_rejects_queued_actions() {
     let mut app = EffectcraftApp::new(Session::default());
-    app.assistant.prompt = "Do work".into();
-    app.assistant.attach = false;
+    *app.assistant.panel.prompt_mut() = "Do work".into();
+    app.session.prefs.ai.attach_frames = false;
     begin_with(&mut app, &egui::Context::default(), |_| Ok(create_comp())).unwrap();
-    stop(&mut app.assistant);
+    app.assistant.panel.stop();
     turn(&mut app);
-    assert!(app.assistant.message.contains("Stopped"));
+    assert!(app.assistant.panel.message().contains("Stopped"));
     assert_eq!(app.session.project.comps().count(), 0);
 }
 
 #[test]
 fn credentials_and_messages_are_not_in_serialized_editor_data() {
     let mut app = EffectcraftApp::new(Session::default());
-    app.assistant.key = "sk-private-test-credential".into();
-    app.assistant.prompt = "private draft".into();
-    record(&mut app.assistant, "You", "private conversation".into());
+    app.assistant.panel.set_session_key("sk-private-test-credential".into()).unwrap();
+    // Queue a private conversation through the shared plugin; no serializer can observe it.
+    *app.assistant.panel.prompt_mut() = "private conversation".into();
+    begin_with(&mut app, &egui::Context::default(), |_| {
+        Ok(json!({"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"private conversation"}]}]}))
+    })
+    .unwrap();
+    turn(&mut app);
+    *app.assistant.panel.prompt_mut() = "private draft".into();
     let (req, _) = crate::ControlRequest::new("ui.inspect", json!({}));
     let control::Outcome::Done(inspected) = control::handle(&mut app, &egui::Context::default(), &req, 0.0) else { panic!("inspect must complete") };
     let project = serde_json::to_string(&app.session.project).unwrap();
@@ -165,7 +174,7 @@ fn preferences_persist_and_recover_without_plaintext_credentials() {
     assert!(prefs.set("ai.model", json!("bad\nmodel")).is_err());
     let recovered = effectcraft_engine::prefs::Prefs::from_json(r#"{"general":{"undoLevels":12},"ai":{"model":null,"apiKey":"sk-secret"}}"#);
     assert_eq!(recovered.general.undo_levels, 12);
-    assert_eq!(recovered.ai.model, api::DEFAULT_MODEL);
+    assert_eq!(recovered.ai.model, craft_ai_chat_egui::core::DEFAULT_MODEL);
     assert!(!recovered.to_json().contains("sk-secret"));
 }
 
@@ -239,27 +248,28 @@ fn ai_panel_docks_floats_reopens_and_saves_its_workspace() {
 fn input_tool_is_dispatched_once_and_waits_for_the_accepted_pass() {
     let mut app = EffectcraftApp::new(Session::default());
     let ctx = egui::Context::default();
-    let (tool, control_reply, label) = tools::parse("effectcraft", &json!({"method":"ui.key","params_json":"{\"key\":\"ArrowRight\"}"})).unwrap();
-    let (reply, receiver) = mpsc::channel();
-    let (_sender, events) = mpsc::channel();
-    app.assistant.pending = Some(Pending {
-        events,
-        cancel: Default::default(),
-        instance: app.session.project_instance.clone(),
-        tool: Some(Box::new(ToolJob { tool, control_reply, label, reply, deadline: Instant::now() + Duration::from_secs(5) })),
-    });
-    poll_inner(&mut app, &ctx);
+    app.session.prefs.ai.attach_frames = false;
+    *app.assistant.panel.prompt_mut() = "Step once".into();
+    let mut n = 0;
+    begin_with(&mut app,&ctx,move |_|{n+=1;Ok(if n==1 {json!({"status":"completed","output":[{"type":"function_call","call_id":"input","name":"effectcraft","arguments":json!({"method":"ui.key","params_json":"{\"key\":\"ArrowRight\"}"}).to_string()}]})}else{json!({"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Stepped"}]}]})})}).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while app.synthetic.is_empty() && Instant::now() < deadline {
+        poll(&mut app, &ctx);
+        std::thread::sleep(Duration::from_millis(2));
+    }
     let count = app.synthetic.len();
     assert!(count > 0);
-    assert!(receiver.try_recv().is_err());
-    poll_inner(&mut app, &ctx);
-    assert_eq!(app.synthetic.len(), count);
     assert!(app.want_paint);
+    assert_eq!(app.input_waiters.len(), 1);
+    poll(&mut app, &ctx);
+    assert_eq!(app.synthetic.len(), count);
+    assert_eq!(app.input_waiters.len(), 1);
     for reply in app.input_waiters.drain(..) {
         reply.send(json!({"ok":true,"result":null})).unwrap();
     }
-    poll_inner(&mut app, &ctx);
-    assert!(receiver.try_recv().unwrap().as_str().unwrap().contains("true"));
+    turn(&mut app);
+    assert_eq!(app.synthetic.len(), count);
+    assert!(app.assistant.panel.message().contains("Ready"));
 }
 
 #[test]
@@ -273,10 +283,10 @@ fn forget_key_removes_the_password_fields_undo_history() {
     ctx.memory_mut(|memory| memory.request_focus(id));
     h.input_mut().events.push(egui::Event::Text("sk-private-test-credential".into()));
     h.run_steps(3);
-    assert_eq!(h.state().assistant.key, "sk-private-test-credential");
+    assert!(h.state().assistant.panel.has_key());
     h.get_by_label("Forget key").click();
     h.run_steps(3);
-    assert!(h.state().assistant.key.is_empty());
+    assert!(!h.state().assistant.panel.has_key());
     ctx.memory_mut(|memory| memory.request_focus(id));
     h.input_mut().events.push(egui::Event::Key {
         key: egui::Key::Z,
@@ -286,5 +296,5 @@ fn forget_key_removes_the_password_fields_undo_history() {
         modifiers: egui::Modifiers { command: true, ..Default::default() },
     });
     h.run_steps(3);
-    assert!(h.state().assistant.key.is_empty(), "Undo must not restore a forgotten API key");
+    assert!(!h.state().assistant.panel.has_key(), "Undo must not restore a forgotten API key");
 }

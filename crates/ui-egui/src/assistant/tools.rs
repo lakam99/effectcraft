@@ -1,18 +1,7 @@
+use crate::{ControlRequest, EffectcraftApp, control};
+use serde_json::{Value, json};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, mpsc};
-
-use serde::Deserialize;
-use serde_json::{Value, json};
-
-use crate::{ControlRequest, EffectcraftApp};
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct EditorArgs {
-    method: String,
-    params_json: String,
-}
-
 pub(super) enum Tool {
     Editor(ControlRequest),
     Frame { monitor: String, snapshot: Option<Snapshot> },
@@ -23,64 +12,56 @@ pub(super) struct Snapshot {
     receive: mpsc::Receiver<Result<Value, String>>,
 }
 
-pub(super) fn parse(name: &str, args: &Value) -> Result<(Tool, mpsc::Receiver<Value>, String), String> {
-    match name {
-        "effectcraft" => {
-            let args: EditorArgs = serde_json::from_value(args.clone()).map_err(|_| "Expected method and params_json strings")?;
-            let supported = super::api::tools();
-            let allowed = supported
-                .pointer("/0/parameters/properties/method/enum")
-                .and_then(Value::as_array)
-                .is_some_and(|methods| methods.iter().any(|m| m.as_str() == Some(&args.method)));
-            if !allowed {
-                return Err("Unsupported EffectCraft method; use the tool's declared methods".into());
-            }
-            if args.params_json.len() > 64 * 1024 {
-                return Err("Editor parameters exceed 64 KiB".into());
-            }
-            let params: Value = serde_json::from_str(&args.params_json).map_err(|_| "params_json must contain a valid JSON object")?;
-            if !params.is_object() {
-                return Err("params_json must contain a JSON object".into());
-            }
-            // Credentials and Send controls belong to the human, never to the model's tool loop.
-            if targets_chat(&params, 0) {
-                return Err("AI chat controls and preferences are reserved for the user".into());
-            }
-            let label = format!("{} {}", args.method, args.params_json.chars().take(1024).collect::<String>());
-            let (request, receiver) = ControlRequest::new(args.method, params);
-            Ok((Tool::Editor(request), receiver, label))
-        }
-        "video_frame" => {
-            #[derive(Deserialize)]
-            #[serde(deny_unknown_fields)]
-            struct Args {
-                monitor: String,
-            }
-            let args: Args = serde_json::from_value(args.clone()).map_err(|_| "Expected a monitor: Composition or Footage")?;
-            if !matches!(args.monitor.as_str(), "Composition" | "Footage") {
-                return Err("monitor must be Composition or Footage".into());
-            }
-            let (_, rx) = mpsc::channel();
-            Ok((Tool::Frame { monitor: args.monitor.clone(), snapshot: None }, rx, format!("Video frame: {}", args.monitor)))
-        }
-        _ => Err("Unknown AI tool".into()),
-    }
+pub(crate) struct Pending {
+    tool: Tool,
+    control_reply: std::sync::mpsc::Receiver<Value>,
 }
-
-fn targets_chat(value: &Value, depth: usize) -> bool {
-    if depth > 32 {
-        return true;
-    }
-    match value {
-        Value::Object(object) => object.iter().any(|(key, value)| {
-            key == "ai"
-                || key.starts_with("ai.")
-                || matches!(key.as_str(), "command" | "id" | "key" | "page")
-                    && value.as_str().is_some_and(|id| id == "ai" || id.starts_with("ai.") || id.starts_with("settings.ai."))
-                || targets_chat(value, depth + 1)
-        }),
-        Value::Array(values) => values.iter().any(|value| targets_chat(value, depth + 1)),
-        _ => false,
+pub(super) fn parse(name: &str, args: &Value) -> Result<(Tool, std::sync::mpsc::Receiver<Value>, String), String> {
+    let (tool, rx) = match super::editor_tools().parse(name, args)? {
+        craft_ai_chat_egui::core::editor::EditorCall::Command { method, params } => {
+            let (req, rx) = ControlRequest::new(method, params);
+            (Tool::Editor(req), rx)
+        }
+        craft_ai_chat_egui::core::editor::EditorCall::View(monitor) => {
+            let (_, rx) = std::sync::mpsc::channel();
+            (Tool::Frame { monitor, snapshot: None }, rx)
+        }
+    };
+    Ok((tool, rx, name.into()))
+}
+pub(super) fn start(call: &craft_ai_chat_egui::ToolCall) -> Result<Pending, String> {
+    let (tool, control_reply, _) = parse(&call.name, &call.arguments)?;
+    Ok(Pending { tool, control_reply })
+}
+pub(super) fn poll(app: &mut EffectcraftApp, ctx: &egui::Context, pending: &mut Pending) -> Result<Option<Value>, String> {
+    match &mut pending.tool {
+        Tool::Frame { monitor, snapshot } => frame(app, monitor, snapshot),
+        Tool::Editor(req) => match pending.control_reply.try_recv() {
+            Ok(value) => Ok(Some(Value::String(value.to_string()))),
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => Err("Editor input channel closed".into()),
+            Err(std::sync::mpsc::TryRecvError::Empty) if req.method.is_empty() => Ok(None),
+            Err(std::sync::mpsc::TryRecvError::Empty) => match control::handle(app, ctx, req, app.now) {
+                control::Outcome::Done(value) => Ok(Some(Value::String(value.to_string()))),
+                control::Outcome::Retry(_) => Ok(None),
+                control::Outcome::AfterInput => {
+                    app.input_waiters.push(req.reply.clone());
+                    app.want_paint = true;
+                    req.method.clear();
+                    Ok(None)
+                }
+                control::Outcome::AwaitJobs(waiter) => {
+                    app.job_waiters.push((waiter, req.reply.clone()));
+                    req.method.clear();
+                    Ok(None)
+                }
+                control::Outcome::AwaitScript(host) => {
+                    app.script_waiters.push((host, req.reply.clone()));
+                    req.method.clear();
+                    Ok(None)
+                }
+                control::Outcome::Screenshot { .. } => Err("Use active-view capture to inspect media".into()),
+            },
+        },
     }
 }
 
