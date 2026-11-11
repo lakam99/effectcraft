@@ -4,7 +4,7 @@ This fork adds **Window → AI Chat**, a dedicated dock panel. Drag its tab to s
 
 In **Edit → Preferences → AI Chat** (macOS: **EffectCraft → Settings → AI Chat**), choose the OpenAI model, whether to attach frames automatically, and whether to remember the API key securely. These choices live in the editor's normal `prefs.json`, outside project files. The panel's **Preferences…** button opens that same page.
 
-Enter your OpenAI API key in the panel or settings page. **Save key securely** stores it separately in Windows Credential Manager, macOS Keychain or Linux Secret Service. With secure saving enabled, Send also saves the entered key. Opening the connection UI reloads it after a restart. **Forget key** clears the current field and its undo history and deletes the stored credential. Turn off secure saving for a session-only key; this also removes a previously saved credential. A locked or unavailable credential service reports an error and never falls back to a plaintext file. Each editor configuration directory has its own credential entry, separate from FilmCraft's.
+Enter your OpenAI API key in the panel or settings page. **Save key securely** stores it separately in Windows Credential Manager, macOS Keychain or Linux Secret Service. With secure saving enabled, Send also saves the entered key. Opening AI Chat reloads it after a restart. **Forget key** clears the current field and its undo history and deletes the stored credential. Turn off secure saving for a session-only key; this also removes a previously saved credential. A locked or unavailable credential service reports an error and never falls back to a plaintext file. Each editor configuration directory has its own credential entry, separate from FilmCraft's.
 
 The native app sends messages directly to `https://api.openai.com/v1/responses` with your key. A compatible model must support Responses, image input and function tools. The default matches the FilmCraft fork (`gpt-6.1-sol`); the model ID is editable. Your OpenAI account pays for API usage. Requests use `store: false`; messages and tool history remain in app memory and are not saved in projects or preferences. Consult [OpenAI's data controls](https://developers.openai.com/api/docs/guides/your-data) for provider retention policies.
 
@@ -20,7 +20,7 @@ The `effectcraft` function uses the editor's existing dispatcher:
 - UI tools inspect widgets, click, drag, type, scroll, navigate viewers and timelines, control playback and arrange panels.
 - `video_frame` returns an in-memory PNG of the current Composition or Footage frame.
 
-Completed edits use normal Undo. Review the assistant's tool results and the resulting picture. **Stop** prevents further tools; it does not undo completed edits or terminate a render job already started. A project replacement cancels the turn before any delayed tool can edit the new project. A new project or model starts fresh model context. **Clear chat** discards in-memory conversation once the turn has stopped.
+Completed edits use normal Undo. Review the assistant's action cards and the resulting picture. **Stop** prevents further tools; it does not undo completed edits or terminate a render job already started. A project replacement cancels the turn before any delayed tool can edit the new project. A new project or model starts fresh model context. **New chat** discards in-memory conversation once the turn has stopped.
 
 The assistant cannot invoke its own Send or credential commands, configure its own preferences, run a separate shell tool or force the app to quit. The loop permits at most 32 tool calls per turn, caps request/reply sizes, and times out unresponsive tools. Use `wait: false` for long rendering or analysis commands and inspect their jobs afterward. An in-flight OpenAI request can take up to 120 seconds to finish after Stop.
 
@@ -48,3 +48,19 @@ Other Craft products can integrate the same source plugin through the `Host`
 trait, advertising their own tools and document context. See the shared
 repository's adapter guide and compiled non-video document example. This requires
 rebuilding the host application; it is not a runtime plugin for existing binaries.
+
+## Conversation and Markdown
+
+Use the key-status button at the top of AI Chat to open connection controls.
+The composer stays at the bottom: **Enter** sends and **Shift+Enter** adds a line.
+During a request, **Stop** replaces Send. **New chat** clears the session.
+
+Messages support Markdown headings, bold and italic text, lists, quotes, links,
+fenced code blocks and tables. Use **Copy** on an assistant reply to copy its
+original Markdown. Images and HTML are omitted, and local or non-web links are
+blocked. Deeply nested Markdown falls back to plain text.
+
+Editor tool calls appear as named action cards with Working, Done, Failed or
+Stopped states. Command names come from the editor's command registry. Raw JSON
+arguments, payloads and frame encodings stay out of the chat; the model still
+receives the full tool results. Errors appear as concise messages on the card.

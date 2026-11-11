@@ -9,6 +9,7 @@ macro_rules! uic {
 /// UI-only commands (not in the AE menus; shortcuts and the command palette).
 pub const UI_COMMANDS: &[UiCommand] = &[
     uic!("ai.chat", "AI Chat", [], None),
+    uic!("ai.connection", "OpenAI Connection", [], None),
     uic!("ai.settings", "AI Chat Preferences", [], None),
     uic!("ai.send", "Send AI Message", [], None),
     uic!("ai.stop", "Stop AI", [], None),

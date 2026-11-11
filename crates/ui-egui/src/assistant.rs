@@ -80,6 +80,17 @@ impl Host for Adapter<'_> {
             .map(|dir| dir.join(effectcraft_engine::prefs::PREFS_FILE))
             .map(|preferences_file| CredentialProfile { preferences_file, service: "EffectCraft Fork / OpenAI".into() })
     }
+    fn tool_label(&self, call: &ToolCall) -> String {
+        if let Some(id) = craft_ai_chat_egui::command_id(call) {
+            if let Some(command) = effectcraft_engine::command_specs().iter().find(|command| command.id == id) {
+                return command.label.into();
+            }
+            if let Some(command) = crate::menus::UI_COMMANDS.iter().find(|command| command.id == id) {
+                return command.label.into();
+            }
+        }
+        craft_ai_chat_egui::tool_label(call)
+    }
     fn start_tool(&mut self, call: &ToolCall) -> Result<tools::Pending, String> {
         tools::start(call)
     }

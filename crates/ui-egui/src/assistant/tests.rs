@@ -41,7 +41,10 @@ fn mock_openai_turn_uses_real_command_dispatch_and_undo() {
     .unwrap();
     turn(&mut app);
     assert_eq!(app.session.project.item(app.session.active_comp_id().unwrap()).unwrap().name, "AI composition");
-    assert!(app.assistant.panel.transcript().iter().any(|(role, _)| role == "Tool"));
+    let label = effectcraft_engine::command_specs().iter().find(|spec| spec.id == "comp.new").unwrap().label;
+    let activity = app.assistant.panel.transcript().iter().find(|(role, _)| role == "Tool").unwrap();
+    assert_eq!(activity.1, format!("{label} — Done"));
+    assert!(!activity.1.contains("params_json"));
     app.session.execute("edit.undo", json!({})).unwrap();
     assert_eq!(app.session.project.comps().count(), 0);
 }
@@ -156,7 +159,7 @@ fn narrow_panel_keeps_composer_inside_its_bounds() {
         app,
     );
     h.run_steps(5);
-    for id in ["ai.prompt", "ai.send", "ai.stop", "ai.clear", "ai.attach", "ai.settings"] {
+    for id in ["ai.prompt", "ai.send", "ai.clear", "ai.attach", "ai.settings"] {
         let r = h.state().auto.find(id).unwrap().rect;
         assert!(r[0] >= 0.0 && r[1] >= 0.0 && r[0] + r[2] <= rect.width() + 1.0 && r[1] + r[3] <= rect.height() + 1.0, "{id}: {r:?}");
     }
@@ -288,6 +291,7 @@ fn forget_key_removes_the_password_fields_undo_history() {
     h.run_steps(3);
     assert!(!h.state().assistant.panel.has_key());
     ctx.memory_mut(|memory| memory.request_focus(id));
+    h.input_mut().events.push(egui::Event::ModifiersChanged(egui::Modifiers { command: true, ..Default::default() }));
     h.input_mut().events.push(egui::Event::Key {
         key: egui::Key::Z,
         physical_key: None,
@@ -297,4 +301,15 @@ fn forget_key_removes_the_password_fields_undo_history() {
     });
     h.run_steps(3);
     assert!(!h.state().assistant.panel.has_key(), "Undo must not restore a forgotten API key");
+}
+
+#[test]
+fn activity_names_use_the_editors_command_labels() {
+    let mut app = EffectcraftApp::new(Session::default());
+    let ctx = egui::Context::default();
+    let host = Adapter { app: &mut app, ctx: &ctx };
+    for command in effectcraft_engine::command_specs().iter().take(8) {
+        let call = ToolCall::new("effectcraft", json!({"method":"engine.execute","params_json":json!({"command":command.id,"params":{}}).to_string()}));
+        assert_eq!(host.tool_label(&call), command.label);
+    }
 }
