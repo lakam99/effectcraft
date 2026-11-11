@@ -4,6 +4,46 @@ use effectcraft_engine::Session;
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
+#[test]
+fn how_to_guidance_highlights_a_live_panel_without_editing_the_project() {
+    use egui_kittest::{Harness, kittest::Queryable};
+    let mut app = EffectcraftApp::new(Session::default());
+    app.show_panel(crate::dock::PanelKind::AiChat);
+    app.session.prefs.ai.attach_frames = false;
+    let mut h = Harness::builder().with_size(egui::vec2(1500.0, 1000.0)).build_eframe(move |_| app);
+    h.run_steps(4);
+    let target = format!("panel.{}", crate::dock::PanelKind::Project.id());
+    assert!(h.state().auto.find(&target).is_some());
+    let project = h.state().session.project.clone();
+    *h.state_mut().assistant.panel.prompt_mut() = "How do I find my footage?".into();
+    let ctx = h.ctx.clone();
+    let id = target.clone();
+    let mut step = 0;
+    begin_with(h.state_mut(), &ctx, move |_| {
+        step += 1;
+        if step == 1 { Ok(json!({"status":"completed","output":[{"type":"function_call","call_id":"guide","name":"highlight_ui","arguments":json!({"targets":[{"id":id,"label":"Find footage in the Project panel"}]}).to_string()}]})) }
+        else { Ok(json!({"status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"Use the highlighted Project panel to find footage."}]}]})) }
+    }).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(8);
+    while h.state().assistant.panel.busy() && Instant::now() < deadline {
+        h.run_steps(1);
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert!(!h.state().assistant.panel.busy());
+    h.run_steps(3);
+    let status = route(h.state_mut(), &ctx, "ai.status").unwrap().unwrap();
+    assert_eq!(status["highlights"][0]["id"], target);
+    assert_eq!(status["highlights"][0]["visible"], true);
+    assert!(h.query_by_label("1. Find footage in the Project panel (control hidden)").is_none());
+    assert!(Arc::ptr_eq(&project, &h.state().session.project));
+    if let Some(dir) = std::env::var_os("CRAFT_AI_EDITOR_FIXTURES") {
+        std::fs::create_dir_all(&dir).unwrap();
+        h.render().unwrap().save(std::path::Path::new(&dir).join("effectcraft-guidance.png")).unwrap();
+    }
+    route(h.state_mut(), &ctx, "ai.clearHighlights").unwrap().unwrap();
+    assert_eq!(route(h.state_mut(), &ctx, "ai.status").unwrap().unwrap()["highlights"], json!([]));
+}
+
 fn turn(app: &mut EffectcraftApp) {
     let ctx = egui::Context::default();
     let deadline = Instant::now() + Duration::from_secs(8);

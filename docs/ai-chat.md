@@ -1,5 +1,16 @@
 # OpenAI editor assistant
 
+## Highlighted controls
+
+Ask “How do I…?” to get instructions with numbered outlines around the relevant editor
+buttons and panels. The numbers match the guidance shown in the chat. The assistant can
+open a relevant panel or menu first; highlighting leaves the actual edit for you to perform.
+Outlines follow the controls when the layout changes and disappear when a control is hidden.
+Use **Clear highlights** or **Esc** to dismiss the guide. A new question, **Stop**, or opening
+another project clears the previous guide.
+
+## Using the chat
+
 This fork adds **Window → AI Chat**, a dedicated dock panel. Drag its tab to split, tab, float or close it like any other panel. Saved workspaces retain its placement. Closing the panel hides it; **Stop** ends the current assistant turn. Open the panel again through Window.
 
 In **Edit → Preferences → AI Chat** (macOS: **EffectCraft → Settings → AI Chat**), choose the OpenAI model, whether to attach frames automatically, and whether to remember the API key securely. These choices live in the editor's normal `prefs.json`, outside project files. The panel's **Preferences…** button opens that same page.

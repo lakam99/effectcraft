@@ -410,6 +410,8 @@ impl EffectcraftApp {
         }
         panels::crypto_pick::pass_start(self, &ctx);
         self.frame(ui);
+        #[cfg(not(target_arch = "wasm32"))]
+        crate::assistant::paint_guidance(self, &ctx);
         panels::crypto_pick::upkeep(self, &ctx);
         #[cfg(not(target_arch = "wasm32"))]
         pointer_wrap::finish_native(&ctx, frame);
