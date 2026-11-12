@@ -38,7 +38,7 @@ half = { workspace = true }
 bytemuck = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-craft-ai-chat-egui = { git = "https://github.com/lakam99/craft-ai-chat", rev = "3aa569a55f61e98e19b41d5f30f3925adecdad44", version = "0.3.0" }
+craft-ai-chat-egui = { git = "https://github.com/lakam99/craft-ai-chat", rev = "57308f4aa143fefa4de8795b3bc275d2528f8c0f", version = "0.4.0" }
 
 # Floating panels open in OS windows of their own on desktop; the web keeps them in the page.
 craft-ui = { workspace = true, features = ["native-windows"] }

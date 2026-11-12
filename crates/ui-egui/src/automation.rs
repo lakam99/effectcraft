@@ -12,6 +12,12 @@ pub struct Element {
     pub rect: [f32; 4],
     #[serde(skip)]
     pub(crate) response_id: Option<egui::Id>,
+    #[serde(skip)]
+    pub(crate) activated: bool,
+    #[serde(skip)]
+    pub(crate) changed: bool,
+    #[serde(skip)]
+    pub(crate) editing: bool,
 }
 
 #[derive(Default)]
@@ -28,6 +34,9 @@ impl Registry {
             label: label.to_string(),
             rect: [rect.min.x, rect.min.y, rect.width(), rect.height()],
             response_id: None,
+            activated: false,
+            changed: false,
+            editing: false,
         });
     }
     /// Bind an automation name to the widget that actually receives keyboard input.
@@ -35,6 +44,10 @@ impl Registry {
         self.add(id, response.rect, label);
         if let Some(element) = self.elements.last_mut() {
             element.response_id = Some(response.id);
+            // Locally marked value changes cannot be reconstructed with read_response.
+            element.activated = response.clicked();
+            element.changed = response.changed();
+            element.editing = response.has_focus() || response.dragged();
         }
     }
     pub fn begin_frame(&mut self) {

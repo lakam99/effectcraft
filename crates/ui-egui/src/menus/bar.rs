@@ -97,7 +97,7 @@ pub fn menu_bar(app: &mut EffectcraftApp, ui: &mut egui::Ui) {
                 if let Some(inner) = &inner {
                     nav.cover(inner.response.rect);
                 }
-                app.auto.add(&format!("menu.{label}"), response.rect, label);
+                app.auto.add_response(&format!("menu.{label}"), &response, label);
                 drawn += 1;
             }
         });
@@ -191,7 +191,7 @@ fn menu_nodes(
                         None => r,
                     };
                     let r = browse_hover(nav, r);
-                    app.auto.add(&format!("menu.{name}.{i}"), r.rect, &e.label);
+                    app.auto.add_response(&format!("menu.{name}.{i}"), &r, &e.label);
                     nav.entry(ui, depth, &r, false);
                     if r.clicked() || browse_pick(nav, ui, &r) {
                         *clicked = Some((e.command.clone(), e.params.clone()));
@@ -224,6 +224,7 @@ fn menu_nodes(
             }
             MenuNode::Item(e) => {
                 let r = browse_hover(nav, menu_entry(app, ui, e));
+                app.auto.add_response(&format!("menu.command.{}.{:016x}", e.command, r.id.value()), &r, &e.label);
                 nav.entry(ui, depth, &r, false);
                 if r.clicked() || browse_pick(nav, ui, &r) {
                     *clicked = Some((e.command.clone(), e.params.clone()));
