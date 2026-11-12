@@ -5,6 +5,33 @@ use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
 #[test]
+fn batch_renames_forty_items_in_one_tool_call_with_normal_undo() {
+    let mut app = EffectcraftApp::new(Session::default());
+    app.session.prefs.ai.attach_frames = false;
+    let ids: Vec<u64> = (0..40)
+        .map(|i| app.session.execute("comp.new", json!({"name":format!("Original {i}"),"width":128,"height":72})).unwrap()["comp"].as_u64().unwrap())
+        .collect();
+    let commands: Vec<_> = ids
+        .iter()
+        .enumerate()
+        .map(|(i, id)| json!({"command":"project.rename","params_json":json!({"item":id,"name":format!("Take {i:02}")}).to_string()}))
+        .collect();
+    *app.assistant.panel.prompt_mut() = "Rename all forty items".into();
+    let mut request = 0;
+    begin_with(&mut app,&egui::Context::default(),move|body|{
+        request+=1;if request==1 {Ok(json!({"status":"completed","output":[{"type":"function_call","call_id":"bulk","name":"batch_commands","arguments":json!({"editor":"effectcraft","label":"Rename 40 items","commands":commands}).to_string()}]}))}
+        else {let output:Value=serde_json::from_str(body["input"].as_array().unwrap().last().unwrap()["output"].as_str().unwrap()).unwrap();assert_eq!(output["completed"],40);Ok(message())}
+    }).unwrap();
+    turn(&mut app);
+    for (i, id) in ids.iter().enumerate() {
+        assert_eq!(app.session.project.item(effectcraft_engine::project::ItemId(*id)).unwrap().name, format!("Take {i:02}"));
+    }
+    assert_eq!(app.assistant.panel.transcript().iter().filter(|(role, _)| role == "Tool").count(), 1);
+    app.session.execute("edit.undo", json!({})).unwrap();
+    assert_eq!(app.session.project.item(effectcraft_engine::project::ItemId(ids[39])).unwrap().name, "Original 39");
+}
+
+#[test]
 fn guide_observation_preserves_widget_local_value_changes() {
     let mut app = EffectcraftApp::new(Session::default());
     let ctx = egui::Context::default();
@@ -226,6 +253,7 @@ fn preferences_persist_and_recover_without_plaintext_credentials() {
     prefs.set("ai.model", json!("gpt-4.1")).unwrap();
     prefs.set("ai.attachFrames", json!(false)).unwrap();
     prefs.set("ai.rememberKey", json!(false)).unwrap();
+    prefs.set("ai.rememberHistory", json!(false)).unwrap();
     let back = effectcraft_engine::prefs::Prefs::from_json(&prefs.to_json());
     assert_eq!(back.ai, prefs.ai);
     assert!(prefs.set("ai.apiKey", json!("sk-secret")).is_err());

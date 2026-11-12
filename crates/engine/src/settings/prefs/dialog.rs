@@ -109,6 +109,7 @@ pub fn pages() -> Vec<Page> {
                 s("ai.model", "OpenAI Model", Kind::Text, true),
                 s("ai.attachFrames", "Attach Composition and Footage Frames", B, true),
                 s("ai.rememberKey", "Remember Key in OS Credential Store", B, true),
+                s("ai.rememberHistory", "Remember Chat History Locally", B, true),
                 Note("Messages, requested project data and frames go to OpenAI. API usage is billed to your key."),
                 Note("The API key is stored separately in the OS credential store, never in prefs.json or a project."),
             ],
