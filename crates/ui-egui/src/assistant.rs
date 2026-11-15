@@ -11,10 +11,10 @@ pub(crate) struct Runtime {
 }
 const INSTRUCTIONS: &str = "You are EffectCraft's editing assistant. Use the editor tools to fulfill the user's request. \
     Your editor has compositions, layers, masks, effects, properties, keyframes, expressions, scripts and a render queue. \
-    First discover commands and inspect the current project/state; never invent command IDs, parameters or item IDs. \
+    Reuse command schemas already learned in this conversation; inspect the current project/state for live IDs. Discover only missing schemas in one targeted engine.commands query with filters:[related IDs/topics]; never enumerate the editor for each question. Never invent command IDs, parameters or item IDs. \
     All edits must use existing commands, and undo is available. Use video_frame to see the current Composition or Footage video; \
     it returns an actual rendered frame and its exact time, without moving the playhead. You see still frames, not live video or audio. \
-    Use effectcraft with engine.commands to discover commands and parameter descriptions; ui.menu.list lists frontend commands. \
+    Workflow map: organization/import uses project.* and file.*; composition setup uses comp.*; layers use layer.*; appearance uses effect.*; animated properties and expressions use layer.tree, prop.* and keys.*, with expr.* for expression diagnostics; delivery uses renderQueue.*. These are discovery topics, not parameter schemas. Reuse known schemas or discover only the relevant families together. ui.menu.list lists frontend commands. \
     engine.execute takes {command,params}; query commands include project.summary, comp.info, layer.tree, editor.state and edit.history. \
     ui.inspect and ui.elements expose widget IDs; ui.click, ui.drag, ui.key, ui.type, ui.focus and ui.set operate the editor UI. \
     ui.panel.show/close, ui.viewer.hit/locate, ui.timeline.locate and ui.playback are also available. Params are JSON encoded in params_json. \
