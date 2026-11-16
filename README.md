@@ -1,4 +1,5 @@
 > Independent fork: OpenAI editor chat, secure key storage and releases from [lakam99/effectcraft](https://github.com/lakam99/effectcraft/releases). [AI Chat guide](docs/ai-chat.md).
+> **Linked FilmCraft workflow:** use saved compositions directly in FilmCraft and keep tweaking effects without exporting. [Linked-composition guide](docs/linked-compositions.md).
 
 <p align="center">
   <img src="assets/app-icon/hicolor/256x256/apps/ai.storyteller.effectcraft.png" width="128" height="128" alt="EffectCraft icon: an engraved unicorn on a pink tile">

@@ -94,6 +94,12 @@ pub fn frontend(app: &mut EffectcraftApp, ctx: &egui::Context, id: &str, p: Valu
     let now = app.now();
     let v = &mut app.ui.viewer;
     Ok(match id {
+        "composition.copyFilmCraftLink" => {
+            ctx.copy_text(p.to_string());
+            app.session
+                .toast("Composition link copied. In FilmCraft choose File > Link EffectCraft Composition, paste into Source project, then Find compositions.");
+            p
+        }
         "mediaBrowser.copySourcePath" => {
             let path = p.get("path").and_then(Value::as_str).filter(|path| !path.is_empty()).ok_or("A source path is required")?;
             ctx.copy_text(path.to_string());
