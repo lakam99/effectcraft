@@ -14,6 +14,9 @@ pub use effectcraft_script as script;
 
 pub mod app_dirs;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub mod composition_worker;
+
 struct MediaImporter;
 
 impl Importer for MediaImporter {

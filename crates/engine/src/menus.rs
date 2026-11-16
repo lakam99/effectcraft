@@ -573,6 +573,7 @@ File
   Close | file.close
   Close Project | file.closeProject
   Save | file.save
+  Copy FilmCraft Composition Link | composition.copyFilmCraftLink
   Save As
     Save As... | file.saveAs
     Save a Copy... | file.saveCopy

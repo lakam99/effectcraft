@@ -6,6 +6,20 @@ use serde_json::{Value, json};
 use super::{CommandSpec, b_p, comp_id, layer_p, str_p};
 use crate::{EngineError, Result, Session, query};
 
+pub(super) fn link_info(s: &mut Session, p: &Value) -> Result<Value> {
+    let comp = comp_id(s, p)?;
+    let path = s.path.as_ref().ok_or_else(|| EngineError::Other("Save this EffectCraft project before linking it in FilmCraft".into()))?;
+    if s.is_dirty() {
+        return Err(EngineError::Other("Save your EffectCraft changes first; FilmCraft links the saved composition".into()));
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let path =
+        std::path::absolute(path).map_err(|e| EngineError::Other(format!("Could not resolve this project's local path: {e}")))?.to_string_lossy().into_owned();
+    let name = s.project.item(comp).map(|i| i.name.as_str()).unwrap_or("Composition");
+    Ok(json!({"type":"arkcraft-composition","version":1,"path":path,"composition":comp.0,"name":name,
+        "updates":"saved changes","workflow":"In FilmCraft choose File > Link EffectCraft Composition, paste this link into Source project, then Find compositions and Link composition"}))
+}
+
 fn list(s: &mut Session, p: &Value) -> Result<Value> {
     let filter = str_p(p, "filter").map(str::to_ascii_lowercase);
     let only = b_p(p, "enabledOnly").unwrap_or(false);
@@ -213,6 +227,7 @@ pub fn specs() -> Vec<CommandSpec> {
         query!("app.capabilities", "App Capabilities", "{} → version, command/effect counts, export formats, parity summary", capabilities),
         query!("project.summary", "Project Summary", "{}", summary),
         query!("comp.info", "Composition Info", "{comp?}", comp_info),
+        query!("composition.linkInfo", "FilmCraft Composition Link", "{comp?:id|name} -> saved project path and stable composition id; save first", link_info),
         query!("layer.tree", "Layer Property Tree", "{layer?, comp?, depth?, time? (comp s)} → nodes with `path`", layer_tree),
         query!("editor.state", "Editor State", "{}", state),
     ]

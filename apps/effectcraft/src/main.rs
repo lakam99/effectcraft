@@ -68,6 +68,7 @@ fn wayland_drop_notice(wayland_display: Option<&std::ffi::OsStr>, backend: Optio
 /// The command line.
 #[derive(Debug, Default, PartialEq)]
 struct Args {
+    open_composition: Option<u64>,
     control_port: Option<u16>,
     files: Vec<String>,
     /// Open the demo project when no project is given (`--demo`).
@@ -91,6 +92,10 @@ fn parse_args(args: impl IntoIterator<Item = String>, env_port: Result<String, s
         match a.as_str() {
             "--" => options = false,
             "--control" => out.control_port = Some(control_port("--control", args.next().as_deref())?),
+            "--open-composition" => {
+                out.open_composition =
+                    Some(args.next().and_then(|s| s.parse::<u64>().ok()).filter(|id| *id > 0).ok_or("--open-composition needs a positive composition id")?);
+            }
             "--demo" => out.demo = true,
             "--empty" => out.demo = false,
             "--home" => out.home = Some(true),
@@ -183,6 +188,12 @@ fn start_helpers_if_opted_in(session: &mut effectcraft_engine::Session) {
 /// reports startup failure through `startup_failed`. Returns the event loop's result.
 fn main() -> eframe::Result {
     let args: Vec<_> = std::env::args_os().skip(1).collect();
+    // A private renderer has no window, crash-recovery session, update prompts or project writes.
+    if args.len() == 1 && args.first().is_some_and(|a| a == "--linked-composition-worker") {
+        let result = effectcraft_host::composition_worker::run(std::io::stdin().lock(), std::io::stdout().lock());
+        effectcraft_host::stop_helpers();
+        std::process::exit(i32::from(result.is_err()));
+    }
     if crash_report::maybe_run(&args, |description| {
         rfd::MessageDialog::new().set_level(rfd::MessageLevel::Error).set_title("EffectCraft diagnostic report").set_description(description).show();
     }) {
@@ -209,7 +220,7 @@ fn run_desktop(reporter: &crash_report::Shutdown) -> eframe::Result {
     // feed the compatibility report.
     effectcraft_engine::logging::install();
     effectcraft_engine::logging::install_panic_hook();
-    let Args { control_port, files, demo, home } = match parse_args(std::env::args().skip(1), std::env::var("EFFECTCRAFT_CONTROL_PORT")) {
+    let Args { control_port, files, demo, home, open_composition } = match parse_args(std::env::args().skip(1), std::env::var("EFFECTCRAFT_CONTROL_PORT")) {
         Ok(Some(args)) => args,
         Ok(None) => {
             println!("effectcraft {}", env!("CARGO_PKG_VERSION"));
@@ -363,6 +374,11 @@ fn run_desktop(reporter: &crash_report::Shutdown) -> eframe::Result {
                 }
             } else if demo {
                 let _ = session.execute("file.openDemoProject", json!({}));
+            }
+            if let Some(comp) = open_composition
+                && let Err(e) = session.execute("comp.open", json!({"comp":comp}))
+            {
+                log::warn!("linked composition: {e}");
             }
             let media: Vec<String> = files.iter().filter(|f| !is_project_file(f)).cloned().collect();
             if !media.is_empty()

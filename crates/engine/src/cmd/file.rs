@@ -791,6 +791,18 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!("file.openDemoProject", "Open Demo Project", ["Help"], None, "{}", always, demo),
         cmd!("file.open", "Open Project...", ["File"], Some("Cmd+O"), "{path}", always, open),
         cmd!("file.save", "Save", ["File"], Some("Cmd+S"), "{path?}", always, save),
+        cmd!(
+            "composition.copyFilmCraftLink",
+            "Copy FilmCraft Composition Link",
+            ["File"],
+            None,
+            "{comp?:id|name} (save first; clipboard handoff, no video export)",
+            super::has_comp,
+            |s, p| {
+                let link = super::query::link_info(s, p)?;
+                super::frontend(s, "composition.copyFilmCraftLink", &link)
+            }
+        ),
         cmd!("file.saveAs", "Save As...", ["File", "Save As"], Some("Cmd+Shift+S"), "{path}", always, save_as),
         cmd!("file.incrementAndSave", "Increment and Save", ["File"], Some("Cmd+Alt+Shift+S"), "{}", has_path, increment_save),
         cmd!("file.revert", "Revert", ["File"], None, "{}", has_path, revert),
