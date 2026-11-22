@@ -362,18 +362,19 @@ fn input_tool_is_dispatched_once_and_waits_for_the_accepted_pass() {
 fn forget_key_removes_the_password_fields_undo_history() {
     use egui_kittest::{Harness, kittest::Queryable};
     let app = EffectcraftApp::new(Session::default());
-    let mut h = Harness::builder().with_size(egui::vec2(500.0, 500.0)).build_ui_state(|ui, app| credentials_ui(app, ui, false), app);
+    let mut h = Harness::builder().with_size(egui::vec2(500.0, 500.0)).build_ui_state(|ui, app| credentials_ui(app, ui, true), app);
     h.run_steps(4);
-    let ctx = h.ctx.clone();
-    let id = h.state().auto.find("ai.key").unwrap().response_id.unwrap();
-    ctx.memory_mut(|memory| memory.request_focus(id));
+    // Exercise the real preferences form without depending on its component-owned widget scope.
+    h.get_by_role_and_label(egui::accesskit::Role::PasswordInput, "OpenAI API key").focus();
+    h.run_steps(1);
     h.input_mut().events.push(egui::Event::Text("sk-private-test-credential".into()));
     h.run_steps(3);
     assert!(h.state().assistant.panel.has_key());
     h.get_by_label("Forget key").click();
     h.run_steps(3);
     assert!(!h.state().assistant.panel.has_key());
-    ctx.memory_mut(|memory| memory.request_focus(id));
+    h.get_by_role_and_label(egui::accesskit::Role::PasswordInput, "OpenAI API key").focus();
+    h.run_steps(1);
     h.input_mut().events.push(egui::Event::ModifiersChanged(egui::Modifiers { command: true, ..Default::default() }));
     h.input_mut().events.push(egui::Event::Key {
         key: egui::Key::Z,

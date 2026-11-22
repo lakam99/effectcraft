@@ -2239,13 +2239,17 @@ fn disk_frames_outlive_an_edit_that_cant_change_them() {
         let blue = |p: &Arc<Project>, rev: u64, want: &[i64]| {
             let base = series(p, rev);
             let mut got = vec![];
-            for _ in 0..1000 {
+            // Rapid edits can carry hundreds of files on a slow filesystem. This checks
+            // eventual cache contents, not a five-second filesystem performance budget.
+            let started = std::time::Instant::now();
+            for _ in 0..6000 {
                 got = f.disk_frames(&src(p), &base, 0..30, &opts);
                 if got == want {
                     break;
                 }
                 std::thread::sleep(std::time::Duration::from_millis(5));
             }
+            eprintln!("{name}: disk revision {rev} completed {} frames in {:?}", got.len(), started.elapsed());
             got
         };
         assert_eq!(blue(&p0, 1, &(0..30).collect::<Vec<_>>()), (0..30).collect::<Vec<_>>(), "{name}: before");
